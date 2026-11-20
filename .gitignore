@@ -1,0 +1,26 @@
+# Dataset and heavy artifacts (do not include in submission zip per Section 8)
+data/raw/
+data/processed/
+data/yolo_dataset/
+checkpoints/
+runs/
+*.pt
+*.pth
+*.onnx
+*.pkl
+*.joblib
+*.bin
+*.npy
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.idea/
+.vscode/
+
+# Keep splits and configs tracked
+!data/splits/*.txt

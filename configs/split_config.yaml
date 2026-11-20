@@ -1,0 +1,40 @@
+# KITTI Dataset Drive-Sequence Split Configuration
+dataset:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  yolo_dataset_dir: "data/yolo_dataset"
+  splits_dir: "data/splits"
+
+  # KITTI subdirectories inside data/raw
+  image_dir: "data/raw/training/image_2"
+  label_dir: "data/raw/training/label_2"
+  calib_dir: "data/raw/training/calib"
+  velodyne_dir: "data/raw/training/velodyne"
+
+  # Devkit mapping files for drive-sequence grouping (prevents data leakage)
+  devkit_rand_file: "data/raw/devkit/mapping/train_rand.txt"
+  devkit_mapping_file: "data/raw/devkit/mapping/train_mapping.txt"
+
+split:
+  train_ratio: 0.70
+  val_ratio: 0.10
+  test_ratio: 0.20
+  random_seed: 42
+
+# Target classes for detection
+classes:
+  Car: 0
+  Pedestrian: 1
+  Cyclist: 2
+
+# Mapping from raw KITTI classes to our target classes (optional merges or ignores)
+class_mapping:
+  Car: "Car"
+  Van: null
+  Truck: null
+  Pedestrian: "Pedestrian"
+  Person_sitting: null
+  Cyclist: "Cyclist"
+  Tram: null
+  Misc: null
+  DontCare: null

@@ -1,0 +1,11 @@
+# Ultralytics YOLO Dataset Configuration for KITTI (3-Class Split)
+path: ../data/yolo_dataset  # dataset root dir (relative to where ultralytics resolves or overridden via abs path)
+train: images/train
+val: images/val
+test: images/test
+
+# Classes
+names:
+  0: Car
+  1: Pedestrian
+  2: Cyclist

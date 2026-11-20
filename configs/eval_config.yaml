@@ -1,0 +1,47 @@
+# Evaluation & Pipeline Configuration
+evaluation:
+  # Depth evaluation bounds (KITTI standard cap: 1e-3 to 80.0 meters)
+  min_depth: 0.001
+  max_depth: 80.0
+
+  # Object detection matching threshold for system-level distance error
+  iou_threshold: 0.50
+
+  # Bounding box distance extraction strategies:
+  # - "full_median": median of all valid depth pixels inside bbox
+  # - "center_crop_median": median of central 50% width/height region to filter background
+  # - "trimmed_lower_median": 25th-60th percentile median to avoid background sky/buildings
+  default_box_strategy: "center_crop_median"
+  center_crop_ratio: 0.50
+
+  # Random seeds for YOLO multi-run training & reporting (mean +/- std)
+  random_seeds: [42, 123, 999]
+
+models:
+  pipeline1:
+    name: "YOLOv10n + DepthAnythingV2-Metric-Outdoor"
+    detector_type: "yolo"
+    detector_weights: "checkpoints/yolov10n_kitti_seed42.pt"
+    fallback_pretrained: "yolov10n.pt"
+    depth_type: "depth_anything_v2"
+    depth_checkpoint: "depth-anything/Depth-Anything-V2-Metric-Outdoor-Small-hf"
+
+  pipeline2:
+    name: "YOLOv8n + MiDaS-Small (LiDAR Aligned)"
+    detector_type: "yolo"
+    detector_weights: "checkpoints/yolov8n_kitti_seed42.pt"
+    fallback_pretrained: "yolov8n.pt"
+    depth_type: "midas_small"
+    depth_checkpoint: "MiDaS_small"
+
+  pipeline3:
+    name: "HOG+SVM (Pedestrian) + Pinhole Geometry"
+    detector_type: "hog_svm"
+    detector_weights: "checkpoints/hog_svm_pedestrian.joblib"
+    depth_type: "pinhole"
+    assumed_pedestrian_height_m: 1.70
+
+benchmark:
+  warmup_runs: 20
+  timed_runs: 100
+  target_fps: 15.0
