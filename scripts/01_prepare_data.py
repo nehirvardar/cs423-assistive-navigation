@@ -32,6 +32,11 @@ from src.data_prep.lidar_projection import load_velodyne_points, project_velodyn
 def main() -> None:
     parser = argparse.ArgumentParser(description="Prepare KITTI drive-sequence splits, LiDAR depth maps, and YOLO labels.")
     parser.add_argument("--config", type=str, default="configs/split_config.yaml", help="Path to split_config.yaml")
+    parser.add_argument(
+        "--force-resplit",
+        action="store_true",
+        help="Regenerate train/val/test splits even if data/splits/*.txt already exist in the repo",
+    )
     args = parser.parse_args()
 
     with open(args.config, "r", encoding="utf-8") as f:
@@ -59,35 +64,51 @@ def main() -> None:
     )
     print(f"[INFO] Found {len(available_ids)} KITTI images in {img_dir}")
 
-    # 1. Drive-Sequence Grouping & Split
-    id_to_drive = parse_devkit_drive_mapping(
-        rand_file=ds_cfg["devkit_rand_file"],
-        mapping_file=ds_cfg["devkit_mapping_file"],
-        available_ids=available_ids,
-    )
-    train_ids, val_ids, test_ids = create_drive_sequence_splits(
-        available_ids=available_ids,
-        id_to_drive=id_to_drive,
-        train_ratio=cfg["split"]["train_ratio"],
-        val_ratio=cfg["split"]["val_ratio"],
-        seed=cfg["split"]["random_seed"],
-    )
-    save_splits(splits_dir, train_ids, val_ids, test_ids)
+    # 1. Drive-Sequence Grouping & Split (reuse locked repo splits if present)
+    train_txt = splits_dir / "train.txt"
+    val_txt = splits_dir / "val.txt"
+    test_txt = splits_dir / "test.txt"
 
-    # Verify zero drive overlap across splits
-    train_drives = {id_to_drive[i] for i in train_ids}
-    val_drives = {id_to_drive[i] for i in val_ids}
-    test_drives = {id_to_drive[i] for i in test_ids}
-    assert train_drives.isdisjoint(val_drives), "Data leakage detected between train and val drives!"
-    assert train_drives.isdisjoint(test_drives), "Data leakage detected between train and test drives!"
-    assert val_drives.isdisjoint(test_drives), "Data leakage detected between val and test drives!"
+    if not args.force_resplit and train_txt.exists() and val_txt.exists() and test_txt.exists():
+        print(f"[INFO] Using existing locked splits in {splits_dir} (pass --force-resplit to regenerate).")
+        train_ids = [line.strip() for line in train_txt.read_text(encoding="utf-8").splitlines() if line.strip()]
+        val_ids = [line.strip() for line in val_txt.read_text(encoding="utf-8").splitlines() if line.strip()]
+        test_ids = [line.strip() for line in test_txt.read_text(encoding="utf-8").splitlines() if line.strip()]
+        print(
+            f"[SUCCESS] Loaded locked splits:\n"
+            f"  Train: {len(train_ids)} frames\n"
+            f"  Val:   {len(val_ids)} frames\n"
+            f"  Test:  {len(test_ids)} frames"
+        )
+    else:
+        id_to_drive = parse_devkit_drive_mapping(
+            rand_file=ds_cfg["devkit_rand_file"],
+            mapping_file=ds_cfg["devkit_mapping_file"],
+            available_ids=available_ids,
+        )
+        train_ids, val_ids, test_ids = create_drive_sequence_splits(
+            available_ids=available_ids,
+            id_to_drive=id_to_drive,
+            train_ratio=cfg["split"]["train_ratio"],
+            val_ratio=cfg["split"]["val_ratio"],
+            seed=cfg["split"]["random_seed"],
+        )
+        save_splits(splits_dir, train_ids, val_ids, test_ids)
 
-    print(
-        f"[SUCCESS] Drive-sequence split complete (0 drive leakage):\n"
-        f"  Train: {len(train_ids)} frames ({len(train_drives)} drives)\n"
-        f"  Val:   {len(val_ids)} frames ({len(val_drives)} drives)\n"
-        f"  Test:  {len(test_ids)} frames ({len(test_drives)} drives)"
-    )
+        # Verify zero drive overlap across splits
+        train_drives = {id_to_drive[i] for i in train_ids}
+        val_drives = {id_to_drive[i] for i in val_ids}
+        test_drives = {id_to_drive[i] for i in test_ids}
+        assert train_drives.isdisjoint(val_drives), "Data leakage detected between train and val drives!"
+        assert train_drives.isdisjoint(test_drives), "Data leakage detected between train and test drives!"
+        assert val_drives.isdisjoint(test_drives), "Data leakage detected between val and test drives!"
+
+        print(
+            f"[SUCCESS] Drive-sequence split complete (0 drive leakage):\n"
+            f"  Train: {len(train_ids)} frames ({len(train_drives)} drives)\n"
+            f"  Val:   {len(val_ids)} frames ({len(val_drives)} drives)\n"
+            f"  Test:  {len(test_ids)} frames ({len(test_drives)} drives)"
+        )
 
     # 2. Project Velodyne LiDAR points to 2D sparse metric depth maps
     depth_out_dir = processed_dir / "depth_maps"

@@ -106,7 +106,40 @@ def main() -> None:
     if nested_mapping.exists() and not target_mapping.exists():
         shutil.move(str(nested_mapping), str(target_mapping))
 
+    verify_kitti_integrity(raw_root, skip_velodyne=args.skip_velodyne)
     print("\n[SUCCESS] Official KITTI dataset is ready in:", raw_root.resolve())
+
+
+def verify_kitti_integrity(raw_root: Path, skip_velodyne: bool = False) -> None:
+    """Verifies that all 7,481 official KITTI training samples were downloaded and extracted."""
+    expected_count = 7481
+    checks = {
+        "image_2": (raw_root / "training" / "image_2", "*.png"),
+        "label_2": (raw_root / "training" / "label_2", "*.txt"),
+        "calib": (raw_root / "training" / "calib", "*.txt"),
+    }
+    if not skip_velodyne:
+        checks["velodyne"] = (raw_root / "training" / "velodyne", "*.bin")
+
+    print("\n[INFO] Running KITTI integrity verification...")
+    all_ok = True
+    for name, (folder, pattern) in checks.items():
+        count = len(list(folder.glob(pattern))) if folder.exists() else 0
+        status = "OK" if count == expected_count else "MISMATCH"
+        if count != expected_count:
+            all_ok = False
+        print(f"  - {name:<10}: {count}/{expected_count} files [{status}]")
+
+    mapping_ok = (raw_root / "devkit" / "mapping" / "train_rand.txt").exists() and (
+        raw_root / "devkit" / "mapping" / "train_mapping.txt"
+    ).exists()
+    print(f"  - devkit    : {'OK' if mapping_ok else 'MISSING'}")
+
+    if not all_ok or not mapping_ok:
+        raise RuntimeError(
+            "KITTI dataset integrity check failed! Some files are missing or incomplete. "
+            "Please re-run `python scripts/download_kitti.py`."
+        )
 
 
 if __name__ == "__main__":

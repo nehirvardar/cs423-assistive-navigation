@@ -1,4 +1,4 @@
-"""Ultralytics YOLOv8-Nano and YOLOv10-Nano Detector Wrapper.
+g"""Ultralytics YOLOv8-Nano and YOLOv10-Nano Detector Wrapper.
 
 No external repository cloning is needed. Uses the official `ultralytics` package
 to fine-tune and run inference with both `yolov10n` (Pipeline 1) and `yolov8n` (Pipeline 2).
